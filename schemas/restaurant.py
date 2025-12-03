@@ -18,6 +18,8 @@ class RestaurantBase(BaseModel):
 class RestaurantSearchResult(RestaurantBase):
     """Restaurant schema for search results."""
     generated_tags: List[str] = []
+    score: Optional[float] = None
+    korean_pattern: Optional[str] = None
 
 
 class RestaurantDetailResponse(BaseModel):

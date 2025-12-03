@@ -9,7 +9,7 @@ from core.config import settings
 
 
 # Initialize OpenAI client
-client = openai.OpenAI(api_key=settings.OPEN_API_KEY)
+client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
 
 
 async def translate_to_english(text: str) -> str:

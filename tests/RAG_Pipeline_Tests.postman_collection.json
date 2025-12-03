@@ -1,0 +1,316 @@
+{
+	"info": {
+		"_postman_id": "rag-pipeline-tests",
+		"name": "RAG Pipeline Tests",
+		"description": "Restaurant Recommendation RAG Pipeline Test Collection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000/api/v1"
+		}
+	],
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/health",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8000",
+					"path": ["health"]
+				}
+			}
+		},
+		{
+			"name": "1. Basic Search (No User Prefs)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"맛있는 피자 추천해줘\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "기본 검색 - user_preferences 없이 쿼리만으로 검색"
+			}
+		},
+		{
+			"name": "2. With User Preferences",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"레스토랑 추천해줘\",\n    \"user_preferences\": {\n        \"food\": 5.0,\n        \"service\": 3.0,\n        \"ambience\": 2.0,\n        \"price\": 4.0,\n        \"hygiene\": 3.0,\n        \"waiting\": 2.0,\n        \"accessibility\": 1.0\n    }\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "User preferences 포함 검색 (0~5 범위)"
+			}
+		},
+		{
+			"name": "3. ⭐ Query Overrides User Prefs (Price)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"가격이 비싸도 좋으니 분위기가 좋은 이탈리안 레스토랑을 추천해줘\",\n    \"user_preferences\": {\n        \"food\": 3.0,\n        \"service\": 3.0,\n        \"ambience\": 2.0,\n        \"price\": 5.0\n    }\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "핵심 테스트: 유저가 price=5.0(가성비 중시)이지만 쿼리에서 '비싸도 괜찮다'고 함.\n\n기대결과:\n- price 가중치가 낮아짐 (0.1~0.2)\n- ambience 가중치가 높아짐 (0.8~0.9)\n- 분위기 좋은 이탈리안 우선 추천"
+			}
+		},
+		{
+			"name": "4. Borough Filter (Manhattan)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"맨해튼에서 가성비 좋은 한식당 추천해줘\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "지역 필터 테스트 - Manhattan"
+			}
+		},
+		{
+			"name": "5. Borough Filter (Brooklyn)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"브루클린에서 분위기 좋은 카페\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "지역 필터 테스트 - Brooklyn"
+			}
+		},
+		{
+			"name": "6. Multiple Aspects",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"깨끗하고 웨이팅 짧고 맛있는 라멘집 찾아줘\",\n    \"user_preferences\": {\n        \"service\": 5.0\n    }\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "여러 aspect 동시 언급\n\n기대결과:\n- hygiene: 높음 (깨끗하고)\n- waiting: 높음 (웨이팅 짧고)\n- food: 높음 (맛있는)\n- service: 1.0 (user_pref, 쿼리에 없음)"
+			}
+		},
+		{
+			"name": "7. Vague Query (Uses User Prefs)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"아무거나 추천해줘\",\n    \"user_preferences\": {\n        \"food\": 4.0,\n        \"service\": 3.0,\n        \"ambience\": 2.0\n    }\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "모호한 쿼리 - LLM이 모든 aspect를 null로 반환하면 user_preferences가 사용됨"
+			}
+		},
+		{
+			"name": "8. Service Focus",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"직원이 친절하고 서비스 좋은 스테이크 하우스\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "서비스 중시 쿼리"
+			}
+		},
+		{
+			"name": "9. Ambience for Date",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"데이트하기 좋은 조용한 분위기의 프렌치 레스토랑\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "분위기 중시 (데이트)"
+			}
+		},
+		{
+			"name": "10. Budget Friendly",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"가성비 좋고 양 많은 버거집\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "가성비 중시 쿼리"
+			}
+		},
+		{
+			"name": "11. Hygiene Focus",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"위생 깨끗한 초밥집\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "위생 중시 쿼리"
+			}
+		},
+		{
+			"name": "12. Accessibility Focus",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"지하철역 가깝고 접근성 좋은 태국 음식점\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "접근성 중시 쿼리"
+			}
+		},
+		{
+			"name": "13. Override Food Preference",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"user_id\": 1,\n    \"query\": \"맛은 그냥 그래도 되니까 서비스 좋은 곳\",\n    \"user_preferences\": {\n        \"food\": 5.0,\n        \"service\": 2.0\n    }\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/chat/search",
+					"host": ["{{baseUrl}}"],
+					"path": ["chat", "search"]
+				},
+				"description": "food 우선순위 오버라이드 테스트\n\n유저: food=5.0(맛 중시), service=2.0\n쿼리: '맛은 그냥 그래도 되니까'\n\n기대결과:\n- food: 낮아짐 (0.2~0.3)\n- service: 높아짐 (0.8~0.9)"
+			}
+		}
+	]
+}
